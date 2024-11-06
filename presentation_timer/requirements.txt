@@ -1,3 +1,0 @@
-pygame
-flask==2.0.1
-
