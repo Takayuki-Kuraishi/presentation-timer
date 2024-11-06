@@ -110,45 +110,44 @@ class PresentationTimer:
                     minutes=presentation_duration + qa_duration
                 )
         else:
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("タイマー停止"):
-                    st.session_state.timer_running = False
-
-        if st.session_state.timer_running:
-            elapsed_time = datetime.datetime.now() - st.session_state.start_time
-            target_duration = st.session_state.target_duration
-
-            remaining_time = target_duration - elapsed_time
-            if remaining_time.total_seconds() <= 0:
+            if st.button("タイマー停止"):
                 st.session_state.timer_running = False
-                st.session_state.is_overtime = True
-                st.session_state.remaining_time = "+" + self.format_time(-remaining_time)
-            else:
-                st.session_state.remaining_time = self.format_time(remaining_time)
 
-            st.experimental_rerun()  # ページを再描画してリアルタイム更新
+        # タイマー表示部分の更新
+        timer_placeholder = st.empty()
+        if st.session_state.timer_running:
+            while st.session_state.timer_running:
+                elapsed_time = datetime.datetime.now() - st.session_state.start_time
+                target_duration = st.session_state.target_duration
 
-        # タイマーと現在のフェーズの表示
-        if st.session_state.timer_running or st.session_state.remaining_time != "00:00:00":
-            if st.session_state.is_overtime:
-                phase_text = "時間超過"
-                bg_color = self.COLORS['overtime']
-                extra_class = "overtime"
-            else:
-                phase_text = "発表" if st.session_state.current_phase == 'presentation' else "質疑応答"
-                bg_color = self.COLORS[st.session_state.current_phase]
-                extra_class = ""
-            
-            st.markdown(
-                f"""
-                <div class='timer {extra_class}' style='--timer-bg: {bg_color};'>
-                    {st.session_state.remaining_time}
-                </div>
-                <div class='label' style='color: {bg_color};'>{phase_text}</div>
-                """,
-                unsafe_allow_html=True
-            )
+                remaining_time = target_duration - elapsed_time
+                if remaining_time.total_seconds() <= 0:
+                    st.session_state.timer_running = False
+                    st.session_state.is_overtime = True
+                    st.session_state.remaining_time = "+" + self.format_time(-remaining_time)
+                else:
+                    st.session_state.remaining_time = self.format_time(remaining_time)
+
+                # タイマーの表示更新
+                phase_text = "時間超過" if st.session_state.is_overtime else (
+                    "発表" if st.session_state.current_phase == 'presentation' else "質疑応答"
+                )
+                bg_color = self.COLORS.get(
+                    'overtime' if st.session_state.is_overtime else st.session_state.current_phase,
+                    '#4169E1'
+                )
+                extra_class = "overtime" if st.session_state.is_overtime else ""
+
+                timer_placeholder.markdown(
+                    f"""
+                    <div class='timer {extra_class}' style='--timer-bg: {bg_color};'>
+                        {st.session_state.remaining_time}
+                    </div>
+                    <div class='label' style='color: {bg_color};'>{phase_text}</div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                time.sleep(1)
 
 def main():
     timer = PresentationTimer()
