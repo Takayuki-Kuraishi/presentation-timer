@@ -34,7 +34,7 @@
 
         /* フルスクリーンモードでのタイマーサイズを1箇所に統一 */
         .fullscreen .timer {
-            font-size: 36vw;
+            font-size: 30vw;
             /* フルスクリーンでのフォントサイズ */
         }
 
@@ -200,13 +200,39 @@
         .fullscreen .escape-hint {
             opacity: 0.5;
         }
+
+        .bell-input-group {
+            display: flex;
+            align-items: center;
+            margin: 5px 0;
+            opacity: 0.8;
+            position: relative;
+            /* 追加 */
+        }
+
+        #enableSoundBtn {
+            position: absolute;
+            right: -120px;
+            /* ボタンを右側に配置 */
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.9em;
+            padding: 8px 16px;
+            white-space: nowrap;
+        }
+
+        /* 2鈴の入力グループのみに適用されるスタイル */
+        .bell-input-group.bell2-group {
+            position: relative;
+            /* 追加 */
+            margin-right: 120px;
+            /* ボタンのスペースを確保 */
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <button id="enableSoundBtn" style="display: block;">音声を有効にする</button>
-
         <div class="timer" id="timer">00:00</div>
         <div class="phase-indicator" id="phaseIndicator">発表時間</div>
         <div class="controls">
@@ -223,7 +249,6 @@
                 </div>
             </div>
             <div class="total-time" id="totalTime">合計: 15分</div>
-
             <div class="bell-settings">
                 <h3>ベル設定</h3>
                 <div class="bell-input-group">
@@ -231,10 +256,11 @@
                     <input type="number" id="bell1" value="9" min="1" max="60">
                     <span>分</span>
                 </div>
-                <div class="bell-input-group">
+                <div class="bell-input-group bell2-group">
                     <label>2鈴</label>
                     <input type="number" id="bell2" value="10" min="1" max="60">
                     <span>分</span>
+                    <button id="enableSoundBtn">音声を有効にする</button>
                 </div>
                 <div class="bell-input-group">
                     <label>3鈴</label>
@@ -242,7 +268,6 @@
                     <span>分</span>
                 </div>
             </div>
-
             <div class="button-group">
                 <button id="startBtn">開始</button>
                 <button id="stopBtn">停止</button>
