@@ -204,6 +204,8 @@
 
 <body>
     <div class="container">
+        <button id="enableSoundBtn" style="display: block;">音声を有効にする</button>
+
         <div class="timer" id="timer">00:00</div>
         <div class="phase-indicator" id="phaseIndicator">発表時間</div>
         <div class="controls">
@@ -262,6 +264,7 @@ const startBtn = document.getElementById('startBtn');
 const stopBtn = document.getElementById('stopBtn');
 const resetBtn = document.getElementById('resetBtn');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
+const enableSoundBtn = document.getElementById('enableSoundBtn'); // 音声有効化ボタン
 const presentationTimeInput = document.getElementById('presentationTime');
 const qaTimeInput = document.getElementById('qaTime');
 const totalTimeDisplay = document.getElementById('totalTime');
@@ -272,6 +275,24 @@ const bellSound3 = document.getElementById('bellSound3');
 const bell1Input = document.getElementById('bell1');
 const bell2Input = document.getElementById('bell2');
 const bell3Input = document.getElementById('bell3');
+
+// 音声有効化ボタンの処理
+enableSoundBtn.addEventListener('click', async () => {
+    try {
+        await bellSound1.play(); // 音声再生を試みる
+        await bellSound2.play();
+        await bellSound3.play();
+        
+        // 音声が再生できたらボタンを非表示にする
+        bellSound1.pause();
+        bellSound2.pause();
+        bellSound3.pause();
+        enableSoundBtn.style.display = 'none'; // ボタンを隠す
+    } catch (error) {
+        console.warn('音声再生ができませんでした:', error);
+        alert("音声が許可されませんでした。ボタンをもう一度タップしてください。");
+    }
+});
 
 // タイマーの状態定義
 const TimerState = {
