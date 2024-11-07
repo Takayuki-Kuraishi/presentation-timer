@@ -4,6 +4,7 @@
 <head>
     <title>Presentation Timer</title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- レスポンシブ対応 -->
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -22,8 +23,10 @@
         }
 
         .timer {
-            font-size: 12em;
-            font-family: monospace;
+            font-size: 12vw;
+            /* ビューポート幅に基づいたフォントサイズ */
+            font-family: 'Osaka-Mono', 'Osaka', monospace;
+            /* フォントの指定 */
             margin: 20px 0;
             color: #00ffff;
             text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
@@ -41,7 +44,7 @@
         }
 
         .fullscreen .timer {
-            font-size: 20em;
+            font-size: 20vw;
         }
 
         button {
@@ -250,300 +253,281 @@
     <audio id="bellSound1" src="/audio/bellSound1.mp3"></audio>
     <audio id="bellSound2" src="/audio/bellSound2.mp3"></audio>
     <audio id="bellSound3" src="/audio/bellSound3.mp3"></audio>
+</body>
 
-    <script>
-        // DOM要素の取得
-        const timerDisplay = document.getElementById('timer');
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const resetBtn = document.getElementById('resetBtn');
-        const fullscreenBtn = document.getElementById('fullscreenBtn');
-        const presentationTimeInput = document.getElementById('presentationTime');
-        const qaTimeInput = document.getElementById('qaTime');
-        const totalTimeDisplay = document.getElementById('totalTime');
-        const phaseIndicator = document.getElementById('phaseIndicator');
-        const bellSound1 = document.getElementById('bellSound1');
-        const bellSound2 = document.getElementById('bellSound2');
-        const bellSound3 = document.getElementById('bellSound3');
-        const bell1Input = document.getElementById('bell1');
-        const bell2Input = document.getElementById('bell2');
-        const bell3Input = document.getElementById('bell3');
+<script>
+    // DOM要素の取得
+    const timerDisplay = document.getElementById('timer');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const presentationTimeInput = document.getElementById('presentationTime');
+    const qaTimeInput = document.getElementById('qaTime');
+    const totalTimeDisplay = document.getElementById('totalTime');
+    const phaseIndicator = document.getElementById('phaseIndicator');
+    const bellSound1 = document.getElementById('bellSound1');
+    const bellSound2 = document.getElementById('bellSound2');
+    const bellSound3 = document.getElementById('bellSound3');
+    const bell1Input = document.getElementById('bell1');
+    const bell2Input = document.getElementById('bell2');
+    const bell3Input = document.getElementById('bell3');
 
-        // タイマーの状態定義
-        const TimerState = {
-            STOPPED: 'stopped',
-            RUNNING: 'running',
-            PAUSED: 'paused',
-            OVERTIME: 'overtime'
-        };
+    // タイマーの状態定義
+    const TimerState = {
+        STOPPED: 'stopped',
+        RUNNING: 'running',
+        PAUSED: 'paused',
+        OVERTIME: 'overtime'
+    };
 
-        // フルスクリーン管理クラス
-        class FullscreenManager {
-            constructor() {
+    // フルスクリーン管理クラス
+    class FullscreenManager {
+        constructor() {
+            this.isFullscreen = false;
+        }
+
+        async enter() {
+            if (!document.fullscreenElement) {
+                await document.documentElement.requestFullscreen();
+                document.body.classList.add('fullscreen');
+                this.isFullscreen = true;
+            }
+        }
+
+        exit() {
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+                document.body.classList.remove('fullscreen');
                 this.isFullscreen = false;
             }
-
-            async enter() {
-                if (!document.fullscreenElement) {
-                    await document.documentElement.requestFullscreen();
-                    document.body.classList.add('fullscreen');
-                    this.isFullscreen = true;
-                }
-            }
-
-            exit() {
-                if (document.fullscreenElement) {
-                    document.exitFullscreen();
-                    document.body.classList.remove('fullscreen');
-                    this.isFullscreen = false;
-                }
-            }
-
-            toggle() {
-                this.isFullscreen ? this.exit() : this.enter();
-            }
         }
 
-        // 表示管理クラス
-        class DisplayManager {
-            constructor(timerDisplay, phaseIndicator) {
-                this.timerDisplay = timerDisplay;
-                this.phaseIndicator = phaseIndicator;
-            }
+        toggle() {
+            this.isFullscreen ? this.exit() : this.enter();
+        }
+    }
 
-            updateTimer(minutes, seconds) {
-                this.timerDisplay.textContent =
-                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            }
-
-            updatePhase(phase) {
-                this.phaseIndicator.textContent = phase;
-                this.timerDisplay.classList.remove('overtime', 'qa-phase');
-
-                switch (phase) {
-                    case '質疑応答':
-                        this.timerDisplay.classList.add('qa-phase');
-                        break;
-                    case '時間超過':
-                        this.timerDisplay.classList.add('overtime');
-                        break;
-                }
-            }
+    // 表示管理クラス
+    class DisplayManager {
+        constructor(timerDisplay, phaseIndicator) {
+            this.timerDisplay = timerDisplay;
+            this.phaseIndicator = phaseIndicator;
         }
 
-        // ベル管理クラス
-        class BellManager {
-            constructor() {
-                this.bellQueue = [];
-                this.isPlaying = false;
+        updateTimer(minutes, seconds) {
+            this.timerDisplay.textContent =
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        updatePhase(phase) {
+            this.phaseIndicator.textContent = phase;
+            this.timerDisplay.classList.remove('overtime', 'qa-phase');
+
+            switch (phase) {
+                case '質疑応答':
+                    this.timerDisplay.classList.add('qa-phase');
+                    break;
+                case '時間超過':
+                    this.timerDisplay.classList.add('overtime');
+                    break;
             }
+        }
+    }
 
-            async playBell(bell, times = 1) {
-                if (!bell) return;
+    // ベル管理クラス
+    class BellManager {
+        constructor() {
+            this.bellQueue = [];
+            this.isPlaying = false;
+        }
 
-                bell.volume = 1.0;
-                for (let i = 0; i < times; i++) {
-                    try {
-                        await bell.play();
-                        await new Promise(resolve => setTimeout(resolve, 300));
-                    } catch (error) {
-                        console.error('Bell sound playback failed:', error);
-                    }
-                }
-            }
+        async playBell(bell, times = 1) {
+            if (!bell) return;
 
-            checkBells(elapsedTime) {
-                const bell1Minutes = parseInt(bell1Input.value) || 0;
-                const bell2Minutes = parseInt(bell2Input.value) || 0;
-                const bell3Minutes = parseInt(bell3Input.value) || 0;
-
-                if (elapsedTime === bell1Minutes * 60) {
-                    this.playBell(bellSound1, 1);
-                }
-                if (elapsedTime === bell2Minutes * 60) {
-                    this.playBell(bellSound2, 2);
-                }
-                if (elapsedTime === bell3Minutes * 60) {
-                    this.playBell(bellSound3, 3);
+            bell.volume = 1.0;
+            for (let i = 0; i < times; i++) {
+                try {
+                    await bell.play();
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                } catch (error) {
+                    console.error('Bell sound playback failed:', error);
                 }
             }
         }
 
-        // メインのタイマークラス
-        class PresentationTimer {
-            constructor(bellManager, displayManager, fullscreenManager) {
-                this.bellManager = bellManager;
-                this.displayManager = displayManager;
-                this.fullscreenManager = fullscreenManager;
-                this.timer = null;
-                this.timeLeft = 0;
-                this.isRunning = false;
-                this.isOvertime = false;
-                this.overtimeSeconds = 0;
-                this.isPresentationPhase = true;
-                this.presentationSeconds = 0;
-                this.qaSeconds = 0;
-                this.elapsedTime = 0;
-                this.currentState = TimerState.STOPPED;
+        checkBells(elapsedTime) {
+            const bell1Minutes = parseInt(bell1Input.value) || 0;
+            const bell2Minutes = parseInt(bell2Input.value) || 0;
+            const bell3Minutes = parseInt(bell3Input.value) || 0;
+
+            if (elapsedTime === bell1Minutes * 60) {
+                this.playBell(bellSound1, 1);
             }
-
-            updateTotalTime() {
-                const presentationTime = parseInt(presentationTimeInput.value) || 0;
-                const qaTime = parseInt(qaTimeInput.value) || 0;
-                const totalMinutes = presentationTime + qaTime;
-                totalTimeDisplay.textContent = `合計: ${totalMinutes}分`;
-                return totalMinutes;
+            if (elapsedTime === bell2Minutes * 60) {
+                this.playBell(bellSound2, 2);
             }
-
-            async start() {
-                if (this.currentState === TimerState.STOPPED ||
-                    this.currentState === TimerState.PAUSED) {
-                    try {
-                        await this.fullscreenManager.enter();
-                    } catch (error) {
-                        console.warn('Fullscreen request failed:', error);
-                    }
-
-                    if (this.timeLeft === 0) {
-                        this.reset();
-                    }
-
-                    this.isRunning = true;
-                    this.currentState = TimerState.RUNNING;
-                    this.startCountdown();
-                }
+            if (elapsedTime === bell3Minutes * 60) {
+                this.playBell(bellSound3, 3);
             }
+        }
+    }
 
-            stop() {
-                if (this.timer) {
-                    clearInterval(this.timer);
-                    this.timer = null;
-                }
-                this.isRunning = false;
-                this.currentState = TimerState.STOPPED;
-                this.fullscreenManager.exit();
+    // メインのタイマークラス
+    class PresentationTimer {
+        constructor(bellManager, displayManager) {
+            this.bellManager = bellManager;
+            this.displayManager = displayManager;
+            this.timer = null;
+            this.timeLeft = 0;
+            this.isRunning = false;
+            this.isOvertime = false;
+            this.overtimeSeconds = 0;
+            this.isPresentationPhase = true;
+            this.presentationSeconds = 0;
+            this.qaSeconds = 0;
+            this.elapsedTime = 0;
+            this.currentState = TimerState.STOPPED;
+        }
+
+        updateTotalTime() {
+            const presentationTime = parseInt(presentationTimeInput.value) || 0;
+            const qaTime = parseInt(qaTimeInput.value) || 0;
+            totalTimeDisplay.textContent = `合計: ${presentationTime + qaTime}分`;
+        }
+
+        start() {
+            if (this.currentState === TimerState.STOPPED ||
+                this.currentState === TimerState.PAUSED) {
+
+                this.reset();
+                this.isRunning = true;
+                this.currentState = TimerState.RUNNING;
+                this.startCountdown();
             }
+        }
 
-            pause() {
-                if (this.timer) {
-                    clearInterval(this.timer);
-                    this.timer = null;
-                }
-                this.isRunning = false;
-                this.currentState = TimerState.PAUSED;
-            }
-
-            reset() {
-                this.stop();
-                this.isOvertime = false;
-                this.isPresentationPhase = true;
-                this.presentationSeconds = parseInt(presentationTimeInput.value) * 60 || 0;
-                this.qaSeconds = parseInt(qaTimeInput.value) * 60 || 0;
-                this.timeLeft = this.presentationSeconds + this.qaSeconds;
-                this.elapsedTime = 0;
-                this.overtimeSeconds = 0;
-                this.currentState = TimerState.STOPPED;
-
-                this.displayManager.updatePhase('発表時間');
-                this.updateDisplay();
-            }
-
-            startCountdown() {
-                this.timer = setInterval(() => {
-                    if (!this.isOvertime) {
-                        this.timeLeft--;
-                        this.elapsedTime++;
-                        this.bellManager.checkBells(this.elapsedTime);
-
-                        // フェーズの切り替え
-                        if (this.isPresentationPhase && this.timeLeft === this.qaSeconds) {
-                            this.isPresentationPhase = false;
-                            this.displayManager.updatePhase('質疑応答');
-                        }
-
-                        // 時間切れの処理
-                        if (this.timeLeft <= 0) {
-                            this.startCountUp();
-                        }
-                    } else {
-                        this.overtimeSeconds++;
-                    }
-
-                    this.updateDisplay();
-                }, 1000);
-            }
-
-            updateDisplay() {
-                if (!this.isOvertime) {
-                    const minutes = Math.floor(this.timeLeft / 60);
-                    const seconds = this.timeLeft % 60;
-                    this.displayManager.updateTimer(minutes, seconds);
-                } else {
-                    const minutes = Math.floor(this.overtimeSeconds / 60);
-                    const seconds = this.overtimeSeconds % 60;
-                    this.displayManager.updateTimer(minutes, seconds);
-                }
-            }
-
-            startCountUp() {
-                this.isOvertime = true;
-                this.displayManager.updatePhase('時間超過');
+        stop() {
+            if (this.timer) {
                 clearInterval(this.timer);
-                this.startCountdown(); // 新しいカウントアップタイマーを開始
+                this.timer = null;
+            }
+            this.isRunning = false;
+            this.currentState = TimerState.STOPPED;
+        }
+
+        reset() {
+            this.stop();
+            this.isOvertime = false;
+            this.isPresentationPhase = true;
+            this.presentationSeconds = parseInt(presentationTimeInput.value) * 60 || 0;
+            this.qaSeconds = parseInt(qaTimeInput.value) * 60 || 0;
+            this.timeLeft = this.presentationSeconds;
+            this.elapsedTime = 0;
+            this.overtimeSeconds = 0;
+            this.displayManager.updatePhase('発表時間');
+            this.updateDisplay();
+        }
+
+        startCountdown() {
+            this.timer = setInterval(() => {
+                this.timeLeft--;
+                this.elapsedTime++;
+                this.bellManager.checkBells(this.elapsedTime);
+
+                // カウントダウンフェーズの切り替え
+                if (this.timeLeft <= 0) {
+                    if (this.isPresentationPhase && this.qaSeconds > 0) {
+                        this.isPresentationPhase = false;
+                        this.timeLeft = this.qaSeconds;
+                        this.displayManager.updatePhase('質疑応答');
+                    } else {
+                        this.startCountUp();
+                    }
+                }
+
+                this.updateDisplay();
+            }, 1000);
+        }
+
+        updateDisplay() {
+            if (!this.isOvertime) {
+                const minutes = Math.floor(this.timeLeft / 60);
+                const seconds = this.timeLeft % 60;
+                this.displayManager.updateTimer(minutes, seconds);
+            } else {
+                const minutes = Math.floor(this.overtimeSeconds / 60);
+                const seconds = this.overtimeSeconds % 60;
+                this.displayManager.updateTimer(minutes, seconds);
             }
         }
 
-        // インスタンスの作成
-        const bellManager = new BellManager();
-        const displayManager = new DisplayManager(timerDisplay, phaseIndicator);
-        const fullscreenManager = new FullscreenManager();
-        const presentationTimer = new PresentationTimer(
-            bellManager,
-            displayManager,
-            fullscreenManager
-        );
+        startCountUp() {
+            this.isOvertime = true;
+            this.displayManager.updatePhase('時間超過');
+            clearInterval(this.timer);
+            this.startCountdown(); // 新しいカウントアップタイマーを開始
+        }
+    }
 
-        // イベントリスナーの設定
-        document.addEventListener('fullscreenchange', () => {
-            if (!document.fullscreenElement) {
-                document.body.classList.remove('fullscreen');
+    // インスタンスの作成
+    const bellManager = new BellManager();
+    const displayManager = new DisplayManager(timerDisplay, phaseIndicator);
+    const fullscreenManager = new FullscreenManager();
+    const presentationTimer = new PresentationTimer(bellManager, displayManager);
+
+    // イベントリスナーの設定
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement) {
+            document.body.classList.remove('fullscreen');
+            fullscreenManager.isFullscreen = false; // フルスクリーン状態をリセット
+        } else {
+            fullscreenManager.isFullscreen = true;
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && presentationTimer.isRunning) {
+            presentationTimer.stop();
+        } else if (e.key === ' ') {
+            if (presentationTimer.currentState === TimerState.RUNNING) {
+                presentationTimer.pause();
+            } else if (presentationTimer.currentState === TimerState.PAUSED) {
+                presentationTimer.start();
             }
-        });
+            e.preventDefault(); // スクロール防止
+        }
+    });
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && presentationTimer.isRunning) {
-                presentationTimer.stop();
-            } else if (e.key === ' ') {
-                if (presentationTimer.currentState === TimerState.RUNNING) {
-                    presentationTimer.pause();
-                } else if (presentationTimer.currentState === TimerState.PAUSED) {
-                    presentationTimer.start();
-                }
-                e.preventDefault(); // スクロール防止
-            }
-        });
-
-        // 入力フィールドのイベントリスナー
-        presentationTimeInput.addEventListener('change', () => {
-            presentationTimer.updateTotalTime();
-            presentationTimer.reset();
-        });
-
-        qaTimeInput.addEventListener('change', () => {
-            presentationTimer.updateTotalTime();
-            presentationTimer.reset();
-        });
-
-        // ボタンのイベントリスナー
-        startBtn.addEventListener('click', () => presentationTimer.start());
-        stopBtn.addEventListener('click', () => presentationTimer.stop());
-        resetBtn.addEventListener('click', () => presentationTimer.reset());
-        fullscreenBtn.addEventListener('click', () => fullscreenManager.toggle());
-
-        // 初期化
+    // 入力フィールドのイベントリスナー
+    presentationTimeInput.addEventListener('change', () => {
         presentationTimer.updateTotalTime();
         presentationTimer.reset();
-    </script>
+    });
+
+    qaTimeInput.addEventListener('change', () => {
+        presentationTimer.updateTotalTime();
+        presentationTimer.reset();
+    });
+
+    // ボタンのイベントリスナー
+    startBtn.addEventListener('click', async () => {
+        try {
+            await fullscreenManager.enter();  // フルスクリーンモードに切り替え
+        } catch (error) {
+            console.warn('Fullscreen request failed:', error);
+        }
+        presentationTimer.start();  // タイマーを開始
+    });
+    stopBtn.addEventListener('click', () => presentationTimer.stop());
+    resetBtn.addEventListener('click', () => presentationTimer.reset());
+    fullscreenBtn.addEventListener('click', () => fullscreenManager.toggle()); // 全画面表示のトグル
+
+    // 初期化
+    presentationTimer.updateTotalTime();
+    presentationTimer.reset();
+
+</script>
 </body>
 
 </html>
