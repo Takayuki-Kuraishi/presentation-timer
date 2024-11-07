@@ -539,15 +539,18 @@
     const presentationTimer = new PresentationTimer(bellManager, displayManager);
 
     // 音声有効化ボタンの処理
-    enableSoundBtn.addEventListener('click', async () => {
-        try {
-            await bellSound1.play();
-            enableSoundBtn.style.display = 'none';
-        } catch (error) {
-            console.warn('音声再生ができませんでした:', error);
-            alert("音声が許可されませんでした。ボタンをもう一度タップしてください。");
-        }
-    });
+enableSoundBtn.addEventListener('click', async () => {
+    try {
+        await bellSound1.play();
+        await bellSound2.play();
+        await bellSound3.play();
+        enableSoundBtn.style.display = 'none';
+    } catch (error) {
+        console.warn('音声再生ができませんでした:', error);
+        alert("音声が許可されませんでした。ボタンをもう一度タップしてください。");
+    }
+});
+
 
     // イベントリスナーの設定
     document.addEventListener('fullscreenchange', () => {
