@@ -324,16 +324,20 @@
             }
         }
 
-        exit() {
+        async exit() {
             if (document.fullscreenElement) {
-                document.exitFullscreen();
+                await document.exitFullscreen();
                 document.body.classList.remove('fullscreen');
                 this.isFullscreen = false;
             }
         }
 
-        toggle() {
-            this.isFullscreen ? this.exit() : this.enter();
+        async toggle() {
+            if (this.isFullscreen) {
+                await this.exit();
+            } else {
+                await this.enter();
+            }
         }
     }
 
@@ -345,8 +349,7 @@
         }
 
         updateTimer(minutes, seconds) {
-            this.timerDisplay.textContent =
-                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            this.timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
 
         updatePhase(phase) {
@@ -366,14 +369,8 @@
 
     // ベル管理クラス
     class BellManager {
-        constructor() {
-            this.bellQueue = [];
-            this.isPlaying = false;
-        }
-
         async playBell(bell, times = 1) {
             if (!bell) return;
-
             bell.volume = 1.0;
             for (let i = 0; i < times; i++) {
                 try {
@@ -426,13 +423,16 @@
         }
 
         start() {
-            if (this.currentState === TimerState.STOPPED ||
-                this.currentState === TimerState.PAUSED) {
-
-                this.reset();
+            if (!this.isRunning) {  // すでに実行中でない場合のみ実行
                 this.isRunning = true;
                 this.currentState = TimerState.RUNNING;
-                this.startCountdown();
+
+                if (this.timeLeft === 0 && this.elapsedTime === 0) {
+                    // タイマーが完全に初期状態の場合のみリセット
+                    this.reset();
+                }
+
+                this.startCountdown();  // カウントダウンを再開
             }
         }
 
@@ -502,11 +502,8 @@
     // 音声有効化ボタンの処理
     enableSoundBtn.addEventListener('click', async () => {
         try {
-            // 音声再生を許可するために一度音を再生し、短いベル音で確認
             await bellSound1.play();  // 短いベル音を1回再生
-
-            // ボタンを非表示にする
-            enableSoundBtn.style.display = 'none';
+            enableSoundBtn.style.display = 'none';  // ボタンを非表示
         } catch (error) {
             console.warn('音声再生ができませんでした:', error);
             alert("音声が許可されませんでした。ボタンをもう一度タップしてください。");
@@ -523,11 +520,12 @@
     document.addEventListener('fullscreenchange', () => {
         if (!document.fullscreenElement) {
             document.body.classList.remove('fullscreen');
+            fullscreenManager.isFullscreen = false;
         } else {
-            document.body.classList.add('fullscreen'); // クラスが確実に追加されるように変更
+            document.body.classList.add('fullscreen');
+            fullscreenManager.isFullscreen = true;
         }
     });
-
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && presentationTimer.isRunning) {
@@ -556,15 +554,15 @@
     // ボタンのイベントリスナー
     startBtn.addEventListener('click', async () => {
         try {
-            await fullscreenManager.enter();  // フルスクリーンモードに切り替え
+            await fullscreenManager.enter();
         } catch (error) {
             console.warn('Fullscreen request failed:', error);
         }
-        presentationTimer.start();  // タイマーを開始
+        presentationTimer.start();
     });
     stopBtn.addEventListener('click', () => presentationTimer.stop());
     resetBtn.addEventListener('click', () => presentationTimer.reset());
-    fullscreenBtn.addEventListener('click', () => fullscreenManager.toggle()); // 全画面表示のトグル
+    fullscreenBtn.addEventListener('click', () => fullscreenManager.toggle());
 
     // 初期化
     presentationTimer.updateTotalTime();
