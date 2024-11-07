@@ -23,15 +23,21 @@
         }
 
         .timer {
-            font-size: 12vw;
-            /* ビューポート幅に基づいたフォントサイズ */
+            font-size: 18vw;
+            /* 通常画面でのフォントサイズ */
             font-family: 'Osaka-Mono', 'Osaka', monospace;
-            /* フォントの指定 */
             margin: 20px 0;
             color: #00ffff;
             text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
             transition: font-size 0.3s ease, color 0.3s ease;
         }
+
+        /* フルスクリーンモードでのタイマーサイズを1箇所に統一 */
+        .fullscreen .timer {
+            font-size: 50vw;
+            /* フルスクリーンでのフォントサイズ */
+        }
+
 
         .timer.qa-phase {
             color: #ffff00;
@@ -497,11 +503,11 @@
     document.addEventListener('fullscreenchange', () => {
         if (!document.fullscreenElement) {
             document.body.classList.remove('fullscreen');
-            fullscreenManager.isFullscreen = false; // フルスクリーン状態をリセット
         } else {
-            fullscreenManager.isFullscreen = true;
+            document.body.classList.add('fullscreen'); // クラスが確実に追加されるように変更
         }
     });
+
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && presentationTimer.isRunning) {
