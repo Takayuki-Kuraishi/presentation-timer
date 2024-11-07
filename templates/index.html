@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- レスポンシブ対応 -->
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', 'Osaka-Mono', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -25,7 +25,7 @@
         .timer {
             font-size: 14vw;
             /* 通常画面でのフォントサイズ */
-            font-family: 'Osaka-Mono', 'Osaka', monospace;
+            font-family: 'Segoe UI', 'Osaka-Mono', monospace;
             margin: 20px 0;
             color: #00ffff;
             text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
@@ -46,6 +46,28 @@
         .timer.overtime {
             color: #ff0000;
             text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+
+        /* 点滅アニメーションの定義を修正 */
+        @keyframes blink {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* 時間超過時の点滅スタイルを追加 */
+        .timer.overtime {
+            color: #ff0000;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+            animation: blink 1s ease-in-out infinite;
         }
 
         button {
@@ -399,7 +421,6 @@
         }
     }
 
-    // メインのタイマークラス
     class PresentationTimer {
         constructor(bellManager, displayManager) {
             this.bellManager = bellManager;
@@ -423,16 +444,15 @@
         }
 
         start() {
-            if (!this.isRunning) {  // すでに実行中でない場合のみ実行
+            if (!this.isRunning) {
                 this.isRunning = true;
                 this.currentState = TimerState.RUNNING;
 
                 if (this.timeLeft === 0 && this.elapsedTime === 0) {
-                    // タイマーが完全に初期状態の場合のみリセット
                     this.reset();
                 }
 
-                this.startCountdown();  // カウントダウンを再開
+                this.startCountdown();
             }
         }
 
@@ -458,24 +478,16 @@
             this.updateDisplay();
         }
 
-        startCountdown() {
+        startCountUp() {
+            this.isOvertime = true;
+            this.displayManager.updatePhase('時間超過');
+            clearInterval(this.timer);
+
             this.timer = setInterval(() => {
-                this.timeLeft--;
-                this.elapsedTime++;
-                this.bellManager.checkBells(this.elapsedTime);
-
-                // カウントダウンフェーズの切り替え
-                if (this.timeLeft <= 0) {
-                    if (this.isPresentationPhase && this.qaSeconds > 0) {
-                        this.isPresentationPhase = false;
-                        this.timeLeft = this.qaSeconds;
-                        this.displayManager.updatePhase('質疑応答');
-                    } else {
-                        this.startCountUp();
-                    }
-                }
-
-                this.updateDisplay();
+                this.overtimeSeconds++;
+                const minutes = Math.floor(this.overtimeSeconds / 60);
+                const seconds = this.overtimeSeconds % 60;
+                this.displayManager.updateTimer(minutes, seconds);
             }, 1000);
         }
 
@@ -491,30 +503,51 @@
             }
         }
 
-        startCountUp() {
-            this.isOvertime = true;
-            this.displayManager.updatePhase('時間超過');
-            clearInterval(this.timer);
-            this.startCountdown(); // 新しいカウントアップタイマーを開始
+        startCountdown() {
+            this.timer = setInterval(() => {
+                this.timeLeft--;
+                this.elapsedTime++;
+                this.bellManager.checkBells(this.elapsedTime);
+
+                if (this.timeLeft <= 0) {
+                    if (this.isPresentationPhase && this.qaSeconds > 0) {
+                        this.isPresentationPhase = false;
+                        this.timeLeft = this.qaSeconds;
+                        this.displayManager.updatePhase('質疑応答');
+                    } else {
+                        this.startCountUp();
+                        return;
+                    }
+                }
+
+                this.updateDisplay();
+            }, 1000);
+        }
+
+        pause() {
+            if (this.isRunning) {
+                this.stop();
+                this.currentState = TimerState.PAUSED;
+            }
         }
     }
+
+    // イベントリスナーとインスタンス化は外部に移動
+    const bellManager = new BellManager();
+    const displayManager = new DisplayManager(timerDisplay, phaseIndicator);
+    const fullscreenManager = new FullscreenManager();
+    const presentationTimer = new PresentationTimer(bellManager, displayManager);
 
     // 音声有効化ボタンの処理
     enableSoundBtn.addEventListener('click', async () => {
         try {
-            await bellSound1.play();  // 短いベル音を1回再生
-            enableSoundBtn.style.display = 'none';  // ボタンを非表示
+            await bellSound1.play();
+            enableSoundBtn.style.display = 'none';
         } catch (error) {
             console.warn('音声再生ができませんでした:', error);
             alert("音声が許可されませんでした。ボタンをもう一度タップしてください。");
         }
     });
-
-    // インスタンスの作成
-    const bellManager = new BellManager();
-    const displayManager = new DisplayManager(timerDisplay, phaseIndicator);
-    const fullscreenManager = new FullscreenManager();
-    const presentationTimer = new PresentationTimer(bellManager, displayManager);
 
     // イベントリスナーの設定
     document.addEventListener('fullscreenchange', () => {
@@ -536,7 +569,7 @@
             } else if (presentationTimer.currentState === TimerState.PAUSED) {
                 presentationTimer.start();
             }
-            e.preventDefault(); // スクロール防止
+            e.preventDefault();
         }
     });
 
